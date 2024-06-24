@@ -9,10 +9,16 @@ from geometry_msgs.msg import Twist
 
 class MyNode(Node):
     def __init__(self):
-        super().__init__("lidar_control_node")
+        super().__init__("range_control_node")
+        self.frontRight = self.create_subscription(
+            Range,
+            '/range/fr',
+            self.fr_callback,
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+        )
         self.frontLeft = self.create_subscription(
             Range,
-            '/camera',
+            '/range/fl',
             self.fl_callback,
             QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
         )
@@ -20,6 +26,12 @@ class MyNode(Node):
             Range,
             '/range/rr',
             self.rr_callback,
+            QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
+        )
+        self.rearLeft = self.create_subscription(
+            Range,
+            '/range/rl',
+            self.rl_callback,
             QoSProfile(depth=10, reliability=ReliabilityPolicy.BEST_EFFORT)
         )
         self.publisher_ = self.create_publisher(Twist, '/range_cmd_vel', 10)
@@ -36,7 +48,7 @@ class MyNode(Node):
         else:
             control_msg.linear.x = min((self.ranges[0] + self.ranges[1]) / 2, 0.7) / 0.7
         self.publisher_.publish(control_msg)
-        self.get_logger().info("fr: "+ str(self.ranges[0]) + " ,fl: "+ str(self.ranges[1]) + " ,rr: "+ str(self.ranges[2]) + " ,rl: "+ str(self.ranges[3]) +" ,vx: " + str(control_msg.linear.x))
+        #self.get_logger().info("fr: "+ str(self.ranges[0]) + " ,fl: "+ str(self.ranges[1]) + " ,rr: "+ str(self.ranges[2]) + " ,rl: "+ str(self.ranges[3]) +" ,vx: " + str(control_msg.linear.x))
 
 
     def fr_callback(self, msg):

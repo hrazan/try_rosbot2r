@@ -25,10 +25,10 @@ class MyNode(Node):
             self.depthPoints_callback,
             QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         )
-        self.publisher_ = self.create_publisher(Twist, '/range_cmd_vel', 10)
+        self.publisher_ = self.create_publisher(Twist, '/camera_cmd_vel', 10)
         self.timer = self.create_timer(0.1, self.timer_callback)
 
-        self.get_logger().info("range_control_node started")
+        self.get_logger().info("camera_control_node started")
 
 
     def timer_callback(self):
@@ -40,7 +40,7 @@ class MyNode(Node):
     def depthImage_callback(self, msg):
         bridge = CvBridge()
         cv_img = bridge.imgmsg_to_cv2(msg, desired_encoding="passthrough")
-        self.get_logger().info(str(cv_img.shape) + " ,[240, 320]: " + str(cv_img[240, 320]))
+        #self.get_logger().info(str(cv_img.shape) + " ,[240, 320]: " + str(cv_img[240, 320]))
 
 
     def depthPoints_callback(self, msg):
