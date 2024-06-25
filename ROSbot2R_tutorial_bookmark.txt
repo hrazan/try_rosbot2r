@@ -1,0 +1,17 @@
+husarion.com/tutorial/ros2-tutorials/2-creating-nodes-services/
+4.Kinematics and Visualization: Data visualization with PlotJuggler ->skip due to failure of remote desktop
+5.Track object: Result ->skip due failure of remote desktop
+6.Robot Network ->skip due to have just 1 robot
+7.Transforamation ->read but not executed due to not need yet?
+8.SLAM ->read
+9.Navigation ->read
+
+notes:
+"Clock skew detected" error
+>>>sudo date --set "XX Jan 20XX xx:xx:xx" >>>now time and date
+>>>save program and cmake file
+
+activate camera
+>>>>docker compose up -d microros rosbot astra
+
+
