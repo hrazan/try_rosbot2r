@@ -27,14 +27,16 @@ class MyNode(Node):
 
         self.rangeCmd_msg = Twist()
         self.lidarCmd_msg = Twist()
+        self.maxLinearVelocity = 0.5
+        self.maxAngularVelocity = 1.0
         self.get_logger().info("movement_control_node started")
 
 
     def timer_callback(self):
         control_msg = Twist()
-        control_msg.linear.x = (self.rangeCmd_msg.linear.x + self.lidarCmd_msg.linear.x) / 2
-        control_msg.angular.z = (self.rangeCmd_msg.angular.z + self.lidarCmd_msg.angular.z) / 2
-        #self.publisher_.publish(control_msg)
+        control_msg.linear.x = ((self.rangeCmd_msg.linear.x + self.lidarCmd_msg.linear.x) / 2) * self.maxLinearVelocity
+        control_msg.angular.z = ((self.rangeCmd_msg.angular.z + self.lidarCmd_msg.angular.z) / 2) * self.maxAngularVelocity
+        self.publisher_.publish(control_msg)
         self.get_logger().info("rvx: " + str(self.rangeCmd_msg.linear.x) + " ,rwz: " + str(self.rangeCmd_msg.angular.z) + " ,lvx: " + str(self.lidarCmd_msg.linear.x) + " ,lwz: " + str(self.lidarCmd_msg.angular.z) + " ,vx: " + str(control_msg.linear.x) + " ,wz: " + str(control_msg.angular.z))
 
 
