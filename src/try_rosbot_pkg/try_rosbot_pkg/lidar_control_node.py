@@ -76,8 +76,7 @@ class MyNode(Node):
         control_msg.linear.x  = linear_x
         control_msg.angular.z = angular_z
         if self.range_average[2] < 0.4:
-            control_msg.linear.x  = 0
-            control_msg.angular.z = 1
+            control_msg.linear.x  = 0.0
 
         self.publisher_.publish(control_msg)
         #self.get_logger().info("L: " + str(self.range_average[4]) + " ,DL: " + str(self.range_average[3]) + " ,C: " + str(self.range_average[2]) + " ,DR: " + str(self.range_average[1]) + " ,R: " + str(self.range_average[0]) + " ,vx: " + str(control_msg.linear.x) + " ,wz: " + str(control_msg.angular.z))
