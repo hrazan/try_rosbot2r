@@ -26,6 +26,7 @@ class MyNode(Node):
         self.__visualization_pub = self.create_publisher(Image, '/visualization', 10)
         self.__vel_pub = self.create_publisher(Twist, '/cmd_vel', 10)
         self.__is_tracker_initialized = False
+        self.tracker = None
 
         self.get_logger().info("tracker_node started")
 
@@ -33,27 +34,27 @@ class MyNode(Node):
     def __image_callback(self, msg):
         cv_bridge = CvBridge()
         cv_image  = cv_bridge.imgmsg_to_cv2(msg, "bgr8") #desired_encoding="passthrough")
-        frame     = cv_image.image
-        obj       = None
-        tracker   = None
+        frame     = cv_image
+        obj       = None        
         vel_msg   = Twist()
         
-        if not __is_tracker_initialized:
-            obj, tracker = self.__init_tracker(frame)
+        if not self.__is_tracker_initialized:
+            obj, self.tracker = self.__init_tracker(frame)
         
-        ok, obj = tracker.update(frame)
+        ok, obj = self.tracker.update(frame)
         
         if ok:
-            vel_msg = __designate_control(vel_msg, obj, msg.width);
+            self.get_logger().info(str(obj))
+            vel_msg = self.__designate_control(vel_msg, obj, msg.width);
             self.get_logger().info(f"Angular velocity: {vel_msg.angular.z}")
         else:
             self.get_logger().info("Tracking failure detected. Stop vehicle!")
-            cv2.putText(frame, "tracking failure detected", cv2.Point(100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, cv2.Scalar(0, 0, 255), 2)
+            cv2.putText(frame, "tracking failure detected", (100, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 255), 2)
         	
         self.__vel_pub.publish(vel_msg)
-        self.rectangle(frame, obj, cv2.Scalar(255, 0, 0), 2, 1)
+        cv2.rectangle(frame, (int(obj[0]), int(obj[1])), (int(obj[0]+obj[2]), int(obj[1]+obj[3])), (255, 0, 0), 2)
         
-        cv_image.image = frame
+        cv_image = frame
         img_msg = cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
         self.__visualization_pub.publish(img_msg)
         #self.get_logger().info(str(cv_img.shape) + " ,[240, 320]: " + str(cv_img[240, 320]))
@@ -62,8 +63,8 @@ class MyNode(Node):
     def __init_tracker(self, frame):
         _obj = cv2.selectROI("ROI selector", frame, False)
         _tracker = cv2.legacy.TrackerKCF_create()
-        _tracker.init(frame, obj)
-        __is_tracker_initialized = True;
+        _tracker.init(frame, _obj)
+        self.__is_tracker_initialized = True;
         cv2.destroyWindow("ROI selector")
         cv2.waitKey(1)
         return _obj, _tracker
@@ -71,7 +72,7 @@ class MyNode(Node):
         
 
     def __designate_control(self, vel_msg, obj, img_width):
-        obj_x_center = obj.x + obj.width / 2
+        obj_x_center = obj[0] + obj[2] / 2
         px_to_center = img_width / 2 - obj_x_center
         ang_vel = self.ANGULAR_GAIN * px_to_center / float(img_width)
         
