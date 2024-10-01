@@ -25,6 +25,12 @@ def generate_launch_description():
         executable='camera_control_node',
         name='camera_control'
     )
+    
+    tracker = Node(
+        package='try_rosbot_pkg',
+        executable='tracker_node',
+        name='tracker'
+    )
 
     movement_control = Node(
         package='try_rosbot_pkg',
@@ -37,6 +43,7 @@ def generate_launch_description():
     ld.add_action(lidar_control)
     ld.add_action(range_control)
     ld.add_action(camera_control)
+    ld.add_action(tracker)
     ld.add_action(movement_control)
 
     return ld
