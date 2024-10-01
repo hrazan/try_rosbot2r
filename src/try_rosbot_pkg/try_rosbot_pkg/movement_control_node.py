@@ -22,11 +22,18 @@ class MyNode(Node):
             self.lidarCmd_callback,
             10
         )
+        self.trackerCmd = self.create_subscription(
+            Twist,
+            '/tracker_cmd_vel',
+            self.trackerCmd_callback,
+            10
+        )
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
         self.timer = self.create_timer(0.1, self.timer_callback)
 
         self.rangeCmd_msg = Twist()
         self.lidarCmd_msg = Twist()
+        self.trackerCmd_msg = Twist()
         self.maxLinearVelocity  = 0.25
         self.maxAngularVelocity = 2.00
         self.get_logger().info("movement_control_node started")
@@ -41,9 +48,10 @@ class MyNode(Node):
              control_msg.linear.x  = ((self.rangeCmd_msg.linear.x + self.lidarCmd_msg.linear.x) / 2) * self.maxLinearVelocity
              control_msg.angular.z = self.lidarCmd_msg.angular.z * self.maxAngularVelocity
 
-        self.publisher_.publish(control_msg)
-        self.get_logger().info("rvx: " + str(self.rangeCmd_msg.linear.x) + " ,rwz: " + str(self.rangeCmd_msg.angular.z) + " ,lvx: " + str(self.lidarCmd_msg.linear.x) + " ,lwz: " + str(self.lidarCmd_msg.angular.z) + " ,vx: " + str(control_msg.linear.x) + " ,wz: " + str(control_msg.angular.z))
-
+        #self.publisher_.publish(control_msg)
+        #self.get_logger().info("rvx: " + str(self.rangeCmd_msg.linear.x) + " ,rwz: " + str(self.rangeCmd_msg.angular.z) + " ,lvx: " + str(self.lidarCmd_msg.linear.x) + " ,lwz: " + str(self.lidarCmd_msg.angular.z) + " ,vx: " + str(control_msg.linear.x) + " ,wz: " + str(control_msg.angular.z))
+		
+		self.publisher_.publish(trackerCmd_msg)
 
     def rangeCmd_callback(self, msg):
         self.rangeCmd_msg = msg
@@ -51,6 +59,10 @@ class MyNode(Node):
 
     def lidarCmd_callback(self, msg):
         self.lidarCmd_msg = msg
+        
+    
+    def trackerCmd_callback(self, msg):
+        self.trackerCmd_msg = msg
 
 
 def main(args=None):

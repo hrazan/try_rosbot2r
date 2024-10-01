@@ -45,7 +45,7 @@ class MyNode(Node):
 
     def depthPoints_callback(self, msg):
         img_points = np.array([msg.data])
-        #self.get_logger().info("pts_shape: " + str(img_points.shape) + " " + str(len(msg.data)))
+        self.get_logger().info("pts_shape: " + str(img_points.shape) + " " + str(min(msg.data)) + " " + str(max(msg.data)))
 
 
 def main(args=None):
