@@ -24,15 +24,76 @@ class MyNode(Node):
             QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         )
         self.__visualization_pub = self.create_publisher(Image, '/visualization', 10)
-        self.__vel_pub = self.create_publisher(Twist, '/tracker_cmd_vel', 10)
+        self.__visualization_debug_pub = self.create_publisher(Image, '/visualization_debug', 10)
+        self.__vel_pub = self.create_publisher(Twist, '/cmd_vel', 10) #'/tracker_cmd_vel'
         self.__is_tracker_initialized = False
         self.tracker = None
         self.__lastTrack = False
         self.get_logger().info("tracker_node started")
     
     
-    def __empty(self, img):
-        pass
+    def __image_callback(self, msg):
+        cv_bridge = CvBridge()
+        frame     = cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+        hsv       = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        #RGB (255, 0, 255) PURPLE
+        hue_min   = 150
+        hue_max   = 170
+        sat_min   = 100
+        sat_max   = 255
+        val_min   = 100
+        val_max   = 255
+        lower     = np.array([hue_min, sat_min, val_min])
+        upper     = np.array([hue_max, sat_max, val_max])
+        mask      = cv2.inRange(hsv, lower, upper)
+        cnts, hei = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        max_area  = 0
+        x         = 0
+        y         = 0
+        w         = 0
+        h         = 0
+        approx    = []
+        
+        for c in cnts:
+            area = cv2.contourArea(c)
+            if area > 300 and area > max_area:
+                max_area = area
+                peri     = cv2.arcLength(c, True)
+                approx   = cv2.approxPolyDP(c, 0.02*peri, True)
+                x,y,w,h  = cv2.boundingRect(c)
+                #self.get_logger().info(f"area: {area}")
+        
+        vel_msg  = Twist()
+        is_found = False
+        if w > 0 and h > 0:
+            if len(approx) == 10:
+                is_found = True
+                cv2.putText(frame, f"x: {x}, y: {y}", (x, y+h+40), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                cv2.putText(frame, f"w: {w}, y: {h}", (x, y+h+60), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255, 0), 2)
+                obj_x_center      = x + (w / 2)
+                px_to_center      = (msg.width / 2) - obj_x_center
+                vel_msg.angular.z = px_to_center / (msg.width / 2)
+                vel_msg.angular.x = 0.0
+                
+            cv2.putText(frame, f"Points: {len(approx)}", (x, y+h+20), cv2.FONT_HERSHEY_COMPLEX, 0.7, (0, 255*is_found, 255*(not is_found)), 2)
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255*is_found, 255*(not is_found)), 2)
+        
+        if not is_found:
+            vel_msg.angular.z = 0.0
+            vel_msg.angular.x = 1.0
+        
+        self.__vel_pub.publish(vel_msg)
+        self.get_logger().info(f"ang_vel_x: {vel_msg.angular.x}, ang_vel_z: {vel_msg.angular.z}")
+        
+        """ DEBUG
+        mask_img_msg = cv_bridge.cv2_to_imgmsg(mask, "mono8")
+        #cv2.imshow("Mask", mask)
+        self.__visualization_debug_pub.publish(mask_img_msg)
+        #"""
+        #"""
+        img_msg = cv_bridge.cv2_to_imgmsg(frame, "bgr8")
+        self.__visualization_pub.publish(img_msg)
+        #"""
 
 
     def __image_callback0(self, msg):
@@ -66,44 +127,7 @@ class MyNode(Node):
         img_msg = cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
         self.__visualization_pub.publish(img_msg)
         #self.get_logger().info(str(cv_img.shape) + " ,[240, 320]: " + str(cv_img[240, 320]))
-    
-    
-    def __image_callback(self, msg):
-        cv_bridge = CvBridge()
-        cv_image  = cv_bridge.imgmsg_to_cv2(msg, "bgr8") #desired_encoding="passthrough")
-        frame     = cv_image
-        hsv       = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        hue_min   = 135
-        hue_max   = 175
-        sat_min   = 100
-        sat_max   = 255
-        val_min   = 100
-        val_max   = 255
-        lower     = np.array([hue_min, sat_min, val_min])
-        upper     = np.array([hue_max, sat_max, val_max])
-        mask      = cv2.inRange(hsv, lower, upper)
-        cnts, hei = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        for c in cnts:
-            area = cv2.contourArea(c)
-            if area > 300:
-                self.get_logger().info(f"area: {area}")
-                x, y, w, h = cv2.boundingRect(c)
-                cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
         
-        obj       = None        
-        vel_msg   = Twist()
-        
-        """
-        cv_image = mask
-        mask_img_msg = cv_bridge.cv2_to_imgmsg(cv_image, "mono8")
-        cv2.imshow("Mask", mask)
-        """
-        cv_image = frame
-        img_msg = cv_bridge.cv2_to_imgmsg(cv_image, "bgr8")
-        self.__visualization_pub.publish(img_msg)
-        
-        #self.get_logger().info(str(cv_img.shape) + " ,[240, 320]: " + str(cv_img[240, 320]))
-
 
     def __init_tracker(self, frame):
         _obj = cv2.selectROI("ROI selector", frame, False)
@@ -140,7 +164,6 @@ class MyNode(Node):
             vel_msg.angular.z = ang_vel;
         
         return vel_msg
-
 
 
 def main(args=None):
