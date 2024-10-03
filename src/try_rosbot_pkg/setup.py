@@ -36,6 +36,7 @@ setup(
             "camera_control_node = try_rosbot_pkg.camera_control_node:main",
             "movement_control_node = try_rosbot_pkg.movement_control_node:main",
             "tracker_node = try_rosbot_pkg.tracker_node:main",
+            "tracker_input_node = try_rosbot_pkg.tracker_input_node:main",
         ],
     },
 )
