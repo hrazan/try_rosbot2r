@@ -8,6 +8,7 @@ from rclpy.node import Node
 from rclpy.qos import QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import LaserScan, Range, Image, PointCloud2
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 
 
 class MyNode(Node):
@@ -23,26 +24,48 @@ class MyNode(Node):
             self.__image_callback,
             QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         )
+        self.__input = self.create_subscription(
+            String,
+            '/tracker_input',
+            self.__input_callback,
+            10
+        )
         self.__visualization_pub = self.create_publisher(Image, '/visualization', 10)
         self.__visualization_debug_pub = self.create_publisher(Image, '/visualization_debug', 10)
-        self.__vel_pub = self.create_publisher(Twist, '/cmd_vel', 10) #'/tracker_cmd_vel'
+        self.__vel_pub = self.create_publisher(Twist, '/tracker_cmd_vel', 10) #'/tracker_cmd_vel'
         self.__is_tracker_initialized = False
         self.tracker = None
         self.__lastTrack = False
+        self.__debug = False
+        #RGB (255, 0, 255) PURPLE
+        self.__hue_min   = 150
+        self.__hue_max   = 170
+        self.__sat_min   = 100
+        self.__sat_max   = 255
+        self.__val_min   = 100
+        self.__val_max   = 255
         self.get_logger().info("tracker_node started")
+    
+    
+    def __input_callback(self, msg):
+        if msg.data == "debug_on":
+            self.__debug = True
+        elif msg.data == "debug_off":
+            self.__debug = False
+        else:
+            self.get_logger().info(f"input error: {msg}")
     
     
     def __image_callback(self, msg):
         cv_bridge = CvBridge()
         frame     = cv_bridge.imgmsg_to_cv2(msg, "bgr8")
         hsv       = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        #RGB (255, 0, 255) PURPLE
-        hue_min   = 150
-        hue_max   = 170
-        sat_min   = 100
-        sat_max   = 255
-        val_min   = 100
-        val_max   = 255
+        hue_min   = self.__hue_min
+        hue_max   = self.__hue_max
+        sat_min   = self.__sat_min
+        sat_max   = self.__sat_max
+        val_min   = self.__val_min
+        val_max   = self.__val_max
         lower     = np.array([hue_min, sat_min, val_min])
         upper     = np.array([hue_max, sat_max, val_max])
         mask      = cv2.inRange(hsv, lower, upper)
@@ -83,12 +106,13 @@ class MyNode(Node):
             vel_msg.angular.x = 1.0
         
         self.__vel_pub.publish(vel_msg)
-        self.get_logger().info(f"ang_vel_x: {vel_msg.angular.x}, ang_vel_z: {vel_msg.angular.z}")
+        #self.get_logger().info(f"ang_vel_x: {vel_msg.angular.x}, ang_vel_z: {vel_msg.angular.z}")
         
-        """ DEBUG
-        mask_img_msg = cv_bridge.cv2_to_imgmsg(mask, "mono8")
-        #cv2.imshow("Mask", mask)
-        self.__visualization_debug_pub.publish(mask_img_msg)
+        #""" DEBUG
+        if self.__debug:
+            mask_img_msg = cv_bridge.cv2_to_imgmsg(mask, "mono8")
+            #cv2.imshow("Mask", mask
+            self.__visualization_debug_pub.publish(mask_img_msg)
         #"""
         #"""
         img_msg = cv_bridge.cv2_to_imgmsg(frame, "bgr8")
