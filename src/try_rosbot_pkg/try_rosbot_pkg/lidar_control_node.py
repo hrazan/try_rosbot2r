@@ -4,6 +4,7 @@ import math
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 
 
 class MyNode(Node):
@@ -15,12 +16,19 @@ class MyNode(Node):
             self.listener_callback,
             10
         )
+        self.__input = self.create_subscription(
+            String,
+            '/control_input',
+            self.__input_callback,
+            10
+        )
         self.publisher_ = self.create_publisher(Twist, '/lidar_cmd_vel', 10)
 
         self.lidar_points   = 5
         self.range_total   = []
         self.range_number  = []
         self.range_average = []
+        self.__free_mode   = False
         for i in range(self.lidar_points):
             self.range_total.append(0)
             self.range_number.append(0)
@@ -29,6 +37,15 @@ class MyNode(Node):
         self.get_logger().info("lidar_control_node started")
 
 
+    def __input_callback(self, msg):
+        if msg.data == "free_mode":
+            self.__free_mode = True
+        elif msg.data == "pursue_mode":
+            self.__free_mode = False
+        else:
+            self.get_logger().info(f"input error: {msg}")
+            
+            
     def listener_callback(self, msg):
         linear_x = 0.0
         angular_z = 0.0
@@ -73,10 +90,16 @@ class MyNode(Node):
                 angular_z += (self.range_average[i] / 0.5) * 0.4
 
         control_msg = Twist()
-        control_msg.linear.x  = linear_x
+        
+        if self.__free_mode:
+            control_msg.linear.x  = linear_x
+            if self.range_average[2] < 0.4:
+                control_msg.linear.x  = 0.0
+        else:
+            if self.range_average[2] < 0.4:
+                control_msg.angular.x  = 1.0
+        
         control_msg.angular.z = angular_z
-        if self.range_average[2] < 0.4:
-            control_msg.linear.x  = 0.0
 
         self.publisher_.publish(control_msg)
         #self.get_logger().info("L: " + str(self.range_average[4]) + " ,DL: " + str(self.range_average[3]) + " ,C: " + str(self.range_average[2]) + " ,DR: " + str(self.range_average[1]) + " ,R: " + str(self.range_average[0]) + " ,vx: " + str(control_msg.linear.x) + " ,wz: " + str(control_msg.angular.z))
